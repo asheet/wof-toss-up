@@ -1,6 +1,6 @@
 # 🎡 Wheel of Fortune Toss-up Game
 
-## ⚠️ Note This project has been been built using Cursor and ai models: claude-4-sonnect and gemini-2.5-pro
+## ⚠️ Note This project has been been built using Cursor and ai models: claude-4-sonnet and gemini-2.5-pro. I did not right a single line of code, just chatting with the ai models
 
 A multiplayer web-based game inspired by the "Toss-up" rounds from Wheel of Fortune. Players compete to solve word puzzles as letters are gradually revealed, with the first to buzz in and give the correct answer winning points.
 
