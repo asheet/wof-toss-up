@@ -1,0 +1,30 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: wof-backend
+  labels:
+    app: wheel-of-fortune
+    component: backend
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: wof-backend:latest
+  source:
+    type: Git
+    git:
+      uri: https://github.com/your-username/wof.git
+      ref: main
+    contextDir: backend
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  triggers:
+  - type: ConfigChange
+  - type: GitHub
+    github:
+      secret: webhook-secret-backend
+  - type: Generic
+    generic:
+      secret: webhook-secret-backend

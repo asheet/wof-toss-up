@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wheel of Fortune Toss-up</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Header -->
+        <header class="game-header">
+            <h1>🎡 Wheel of Fortune Toss-up</h1>
+            <div class="header-controls">
+                <button id="mute-host-btn" class="mute-btn" title="Toggle host voice">
+                    <span id="mute-icon">🔊</span> Host Voice
+                </button>
+                <button id="mute-sound-btn" class="mute-btn" title="Toggle sound effects">
+                    <span id="mute-sound-icon">🔊</span> SFX
+                </button>
+                <div class="room-info">
+                    <span id="room-id-display"></span>
+                    <span id="player-name-display"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Answer Section (moved) -->
+        <div class="answer-section" id="answer-section" style="display: none;">
+            <input type="text" id="answer-input" placeholder="Type your answer...">
+            <button id="submit-answer-btn" class="btn btn-secondary">Submit Answer</button>
+        </div>
+
+        <!-- Game Board -->
+        <main class="game-board">
+            <!-- Host Messages -->
+            <div class="host-section">
+                <div class="host-avatar">🎤</div>
+                <div class="host-message" id="host-message">
+                    Welcome to Wheel of Fortune Toss-up!
+                </div>
+            </div>
+
+            <!-- Timer Section -->
+            <div class="timer-section-top">
+                <div class="timer-group">
+                    <div class="timer-display" id="timer-display">⏱️ --:--</div>
+                    <div class="answer-timer-display" id="answer-timer-display" style="display: none;">
+                        Answer: <span id="answer-timer-countdown">--</span>s
+                    </div>
+                </div>
+                <button id="buzz-btn" class="btn btn-danger" disabled>BUZZ IN!</button>
+            </div>
+
+            <!-- Puzzle Display -->
+            <div class="puzzle-section">
+                <div class="category" id="puzzle-category">CATEGORY</div>
+                <div class="puzzle-board" id="puzzle-board">
+                    _ _ _ _ _ _ &nbsp; _ _ &nbsp; _ _ _ _ _ _ _
+                </div>
+            </div>
+
+            <!-- Game Controls -->
+            <div class="controls-section">
+                <button id="start-game-btn" class="btn btn-primary" style="display: none;">▶️ START GAME</button>
+            </div>
+            
+            <!-- Game Status -->
+            <div class="status-section">
+                <div class="round-info">
+                    <span>Round: <span id="round-number">1</span></span>
+                    <span class="game-status" id="game-status">Waiting to start...</span>
+                </div>
+            </div>
+
+            <!-- Scoreboard Section -->
+            <div class="scoreboard-section">
+                <h3>Scoreboard</h3>
+                <div id="scoreboard-bottom">
+                    <!-- Scores will be populated here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Players List -->
+            <div class="players-section">
+                <h3>Players</h3>
+                <div id="players-list">
+                    <!-- Players will be populated here -->
+                </div>
+            </div>
+
+            <!-- Game Log -->
+            <div class="game-log-section">
+                <h3>Game Log</h3>
+                <div id="game-log">
+                    <div class="log-entry">Game starting soon...</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Room Setup Modal -->
+    <div class="modal" id="room-modal">
+        <div class="modal-content">
+            <h2>Join Game Room</h2>
+            <div class="form-group">
+                <label for="room-id-input">Room ID:</label>
+                <input type="text" id="room-id-input" placeholder="Enter room ID or leave blank for new room">
+            </div>
+            <div class="form-group">
+                <label for="player-name-input">Your Name:</label>
+                <input type="text" id="player-name-input" placeholder="Enter your name" maxlength="20">
+            </div>
+            <button id="join-room-btn" class="btn btn-primary">Join Room</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+</html>

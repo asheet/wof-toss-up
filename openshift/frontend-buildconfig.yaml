@@ -1,0 +1,30 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: wof-frontend
+  labels:
+    app: wheel-of-fortune
+    component: frontend
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: wof-frontend:latest
+  source:
+    type: Git
+    git:
+      uri: https://github.com/your-username/wof.git
+      ref: main
+    contextDir: frontend
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  triggers:
+  - type: ConfigChange
+  - type: GitHub
+    github:
+      secret: webhook-secret-frontend
+  - type: Generic
+    generic:
+      secret: webhook-secret-frontend

@@ -1,0 +1,12 @@
+[
+    {"category": "PHRASE", "answer": "BETTER LATE THAN NEVER", "difficulty": "easy"},
+    {"category": "THING", "answer": "CHOCOLATE CHIP COOKIE", "difficulty": "medium"},
+    {"category": "PLACE", "answer": "STATUE OF LIBERTY", "difficulty": "easy"},
+    {"category": "PERSON", "answer": "FAMOUS MOVIE STAR", "difficulty": "medium"},
+    {"category": "PHRASE", "answer": "PIECE OF CAKE", "difficulty": "easy"},
+    {"category": "THING", "answer": "REMOTE CONTROL", "difficulty": "easy"},
+    {"category": "PLACE", "answer": "GRAND CANYON", "difficulty": "easy"},
+    {"category": "PHRASE", "answer": "BREAK A LEG", "difficulty": "medium"},
+    {"category": "THING", "answer": "BIRTHDAY PARTY", "difficulty": "easy"},
+    {"category": "PLACE", "answer": "EIFFEL TOWER", "difficulty": "medium"}
+]

@@ -1,0 +1,45 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: wheel-of-fortune
+
+namespace: wheel-of-fortune
+
+resources:
+  # Namespace
+  - namespace.yaml
+  
+  # ImageStreams
+  - backend-imagestream.yaml
+  - frontend-imagestream.yaml
+  
+  # BuildConfigs
+  - backend-buildconfig.yaml
+  - frontend-buildconfig.yaml
+  
+  # ConfigMaps
+  - nginx-configmap.yaml
+  
+  # Deployments
+  - backend-deployment.yaml
+  - frontend-deployment.yaml
+  
+  # Services
+  - backend-service.yaml
+  - frontend-service.yaml
+  
+  # Routes
+  - route.yaml
+
+commonLabels:
+  app: wheel-of-fortune
+  version: v1.0.0
+
+images:
+  - name: wof-backend
+    newName: wof-backend
+    newTag: latest
+  - name: wof-frontend
+    newName: wof-frontend
+    newTag: latest
