@@ -153,12 +153,12 @@ oc apply -f openshift/route.yaml
 oc new-project wheel-of-fortune
 
 # Deploy backend from source
-oc new-app python:3.11~https://github.com/your-username/wof.git \
+oc new-app python:3.11~https://github.com/asheet/wof.git \
     --context-dir=backend \
     --name=wof-backend
 
 # Deploy frontend from source
-oc new-app nginx:1.25~https://github.com/your-username/wof.git \
+oc new-app nginx:1.25~https://github.com/asheet/wof.git \
     --context-dir=frontend \
     --name=wof-frontend
 

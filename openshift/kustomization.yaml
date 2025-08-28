@@ -10,6 +10,9 @@ resources:
   # Namespace
   - namespace.yaml
   
+  # Secrets
+  - github-secret.yaml
+  
   # ImageStreams
   - backend-imagestream.yaml
   - frontend-imagestream.yaml

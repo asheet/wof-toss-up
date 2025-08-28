@@ -26,17 +26,20 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy application code
 COPY . .
 
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser \
-    && chown -R appuser:appuser /app
-USER appuser
+# OpenShift compatibility: Set permissions for arbitrary user IDs
+# OpenShift runs containers with random user IDs, so we need to make directories writable by group
+RUN chgrp -R 0 /app && \
+    chmod -R g+rwX /app
+
+# OpenShift runs with arbitrary user IDs, so we don't specify a USER
+# The container will run with whatever user ID OpenShift assigns
 
 # Expose port
 EXPOSE 8000
 
-# Health check
+# Health check using curl (more lightweight and OpenShift-compatible)
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/', timeout=10)"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/', timeout=10)"
 
 # Command to run the application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -173,7 +173,64 @@ Modify `frontend/style.css` to customize:
 
 ## 🚀 Deployment
 
-For production deployment:
+### Local Development
+
+Use the convenient startup script to run both frontend and backend:
+
+```bash
+# Start both servers (backend on :8001, frontend on :3000)
+python start_game.py
+```
+
+Or manually:
+```bash
+# Terminal 1: Backend
+cd backend && python start_server.py
+
+# Terminal 2: Frontend  
+cd frontend && python3 -m http.server 3000
+```
+
+### OpenShift Deployment
+
+For OpenShift deployment with private GitHub repositories:
+
+1. **Set up GitHub Access**
+   ```bash
+   cd openshift
+   ./create-github-secret.sh
+   ```
+   This will prompt you for:
+   - Your GitHub username
+   - GitHub Personal Access Token (create at https://github.com/settings/tokens with 'repo' scope)
+
+2. **Deploy to OpenShift**
+   ```bash
+   ./deploy.sh
+   ```
+
+3. **Available Commands**
+   ```bash
+   ./deploy.sh deploy   # Full deployment (default)
+   ./deploy.sh build    # Build only
+   ./deploy.sh status   # Check status
+   ./deploy.sh logs     # Stream logs
+   ./deploy.sh clean    # Remove all resources
+   ```
+
+### Docker Deployment
+
+Build and run with Docker Compose:
+
+```bash
+# Build and start containers
+docker-compose up --build
+
+# Run in background
+docker-compose up -d --build
+```
+
+### Production Considerations
 
 1. **Environment Setup**
    ```bash

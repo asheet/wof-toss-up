@@ -13,9 +13,11 @@ spec:
   source:
     type: Git
     git:
-      uri: https://github.com/your-username/wof.git
+      uri: https://github.com/asheet/wof-toss-up.git
       ref: main
     contextDir: backend
+    sourceSecret:
+      name: github-credentials
   strategy:
     type: Docker
     dockerStrategy:

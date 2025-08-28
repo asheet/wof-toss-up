@@ -10,20 +10,21 @@ COPY . /usr/share/nginx/html/
 # Copy custom nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nginx && \
-    adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx
+# OpenShift compatibility: Set permissions for arbitrary user IDs
+# OpenShift runs containers with random user IDs, so we need to make directories writable by group
+RUN chmod -R g+rwx /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html /etc/nginx/conf.d && \
+    chmod g+rwx /var/cache/nginx /var/run /var/log/nginx
 
-# Set permissions
-RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chown -R nginx:nginx /var/cache/nginx && \
-    chown -R nginx:nginx /var/log/nginx && \
-    chown -R nginx:nginx /etc/nginx/conf.d
+# Create nginx.pid file and make it writable
 RUN touch /var/run/nginx.pid && \
-    chown -R nginx:nginx /var/run/nginx.pid
+    chmod g+rwx /var/run/nginx.pid
 
-# Switch to non-root user
-USER nginx
+# Make the nginx user part of root group (OpenShift requirement)
+RUN chgrp -R 0 /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html /etc/nginx/conf.d && \
+    chmod -R g+rwX /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html /etc/nginx/conf.d
+
+# OpenShift runs with arbitrary user IDs, so we don't specify a USER
+# The container will run with whatever user ID OpenShift assigns
 
 # Expose port
 EXPOSE 8080

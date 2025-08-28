@@ -46,6 +46,23 @@ deploy() {
     
     echo "🚀 Deploying Wheel of Fortune to OpenShift..."
     
+    # Check for GitHub credentials
+    if ! oc get secret github-credentials &> /dev/null; then
+        print_warning "GitHub credentials secret not found!"
+        echo ""
+        echo "For private repositories, you need to create a GitHub Personal Access Token:"
+        echo "1. Go to https://github.com/settings/tokens"
+        echo "2. Generate a new token with 'repo' scope"
+        echo "3. Run this command to create the secret:"
+        echo ""
+        echo "   oc create secret generic github-credentials \\"
+        echo "     --from-literal=username=YOUR_GITHUB_USERNAME \\"
+        echo "     --from-literal=password=YOUR_GITHUB_TOKEN"
+        echo ""
+        echo "Then run this script again."
+        exit 1
+    fi
+    
     # Deploy all resources
     echo "📦 Applying Kubernetes resources..."
     oc apply -k .
