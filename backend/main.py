@@ -88,12 +88,12 @@ class AIGameHost:
         self.model = os.getenv("AI_MODEL", "llama3.2-3b")
         self.base_url = os.getenv("AI_BASE_URL", "http://localhost:8000/v1")
         
-        # TTS Configuration for higgs-audio-v2-generation-3B-base
+        # TTS Configuration for Higgs Audio v2 via vLLM
         self.tts_enabled = os.getenv("TTS_ENABLED", "false").lower() == "true"
         self.tts_model = os.getenv("TTS_MODEL", "higgs-audio-v2-generation-3B-base")
-        self.tts_base_url = os.getenv("TTS_BASE_URL", "http://localhost:8000/v1")
+        self.tts_base_url = os.getenv("TTS_BASE_URL", "http://localhost:8000")
         self.tts_api_key = os.getenv("TTS_API_KEY") or api_key
-        self.tts_voice = os.getenv("TTS_VOICE", "default")
+        self.tts_voice = os.getenv("TTS_VOICE", "game_host")
         
         print(f"🔧 AI Host Debug Info:")
         print(f"   - OpenAI Available: {OPENAI_AVAILABLE}")
@@ -117,11 +117,12 @@ class AIGameHost:
                 )
                 print(f"🤖 AI Game Host enabled with {self.model} at {self.base_url}")
                 
-                # TTS setup for higgs-audio-v2-generation-3B-base
+                # TTS setup for Higgs Audio v2 via vLLM
                 if self.tts_enabled:
-                    print(f"🎤 TTS enabled with higgs model: {self.tts_model}")
-                    print(f"🎤 TTS server: {self.tts_base_url}")
-                    print(f"🎤 TTS voice: {self.tts_voice}")
+                    print(f"🎤 TTS enabled with Higgs Audio v2: {self.tts_model}")
+                    print(f"🎤 TTS vLLM server: {self.tts_base_url}")
+                    print(f"🎤 TTS voice profile: {self.tts_voice}")
+                    print(f"🎤 TTS features: Expressive speech, 75.7% win rate over GPT-4o-mini")
                 
             except Exception as e:
                 print(f"❌ Failed to initialize AI client: {e}")
@@ -231,19 +232,42 @@ class AIGameHost:
         return ai_msg or f"Aww, time's up! It was '{answer}' - but hey, let's keep going with the next round!"
     
     async def generate_speech_audio(self, text: str) -> Optional[str]:
-        """Generate speech audio using higgs-audio-v2-generation-3B-base model and return base64 encoded audio data"""
+        """Generate speech audio using higgs-audio-v2-generation-3B-base model via vLLM and return base64 encoded audio data"""
         if not self.tts_enabled:
             return None
             
         try:
-            print(f"🎤 Generating TTS with higgs model for: {text[:50]}{'...' if len(text) > 50 else ''}")
+            print(f"🎤 Generating TTS with Higgs Audio v2 for: {text[:50]}{'...' if len(text) > 50 else ''}")
             
-            # Prepare the request payload for vllm higgs model
+            # Higgs Audio v2 system prompt optimized for game show hosting
+            system_prompt = (
+                "Generate expressive game show host audio following instruction.\n\n"
+                "<|scene_desc_start|>\n"
+                "Audio is recorded in a professional game show studio with good acoustics. "
+                "The speaker is an enthusiastic, friendly game show host with natural speech patterns, "
+                "appropriate pacing, and engaging intonation suitable for a TV game show audience.\n"
+                "<|scene_desc_end|>"
+            )
+            
+            # Prepare the request payload for Higgs Audio v2 via vLLM
             payload = {
                 "model": self.tts_model,
-                "input": text,
-                "voice": self.tts_voice,
-                "response_format": "mp3"
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": system_prompt
+                    },
+                    {
+                        "role": "user", 
+                        "content": text
+                    }
+                ],
+                "max_tokens": 1024,
+                "temperature": 0.3,
+                "top_p": 0.95,
+                "top_k": 50,
+                "stop": ["<|end_of_text|>", "<|eot_id|>"],
+                "stream": False
             }
             
             headers = {
@@ -251,29 +275,69 @@ class AIGameHost:
                 "Authorization": f"Bearer {self.tts_api_key}" if self.tts_api_key else ""
             }
             
-            # Make async HTTP request to vllm server
+            # Make async HTTP request to vLLM server using chat completions endpoint
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.tts_base_url}/audio/speech",
+                    f"{self.tts_base_url}/v1/chat/completions",
                     json=payload,
                     headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=30)
+                    timeout=aiohttp.ClientTimeout(total=60)  # Increased timeout for audio generation
                 ) as response:
                     if response.status == 200:
-                        audio_data = await response.read()
-                        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-                        print(f"✅ TTS generated successfully with higgs model ({len(audio_data)} bytes)")
-                        return audio_base64
+                        response_data = await response.json()
+                        print(f"🔍 Higgs Audio v2 response keys: {list(response_data.keys())}")
+                        
+                        # Extract audio data from the response
+                        # Note: The exact response format may vary depending on vLLM configuration
+                        if 'choices' in response_data and len(response_data['choices']) > 0:
+                            choice = response_data['choices'][0]
+                            print(f"🔍 Choice keys: {list(choice.keys())}")
+                            
+                            # Check different possible locations for audio data
+                            audio_data = None
+                            if 'audio' in choice:
+                                audio_data = choice['audio']
+                            elif 'message' in choice and 'audio' in choice['message']:
+                                audio_data = choice['message']['audio']
+                            elif 'content' in choice and 'audio' in choice['content']:
+                                audio_data = choice['content']['audio']
+                            elif 'message' in choice and 'content' in choice['message']:
+                                # Sometimes the audio might be embedded in the content
+                                content = choice['message']['content']
+                                if isinstance(content, dict) and 'audio' in content:
+                                    audio_data = content['audio']
+                            
+                            if audio_data:
+                                if isinstance(audio_data, str):
+                                    # Audio data is already base64 encoded
+                                    print(f"✅ TTS generated successfully with Higgs Audio v2 ({len(audio_data)} chars base64)")
+                                    return audio_data
+                                elif isinstance(audio_data, (bytes, bytearray)):
+                                    # Audio data needs to be encoded
+                                    audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                                    print(f"✅ TTS generated successfully with Higgs Audio v2 ({len(audio_data)} bytes)")
+                                    return audio_base64
+                                else:
+                                    print(f"⚠️  Audio data in unexpected format: {type(audio_data)}")
+                                    return None
+                            else:
+                                print(f"⚠️  No audio data found in response")
+                                print(f"🔍 Full response structure: {response_data}")
+                                return None
+                        else:
+                            print(f"❌ Invalid response format from Higgs Audio v2")
+                            print(f"🔍 Response keys: {list(response_data.keys()) if response_data else 'None'}")
+                            return None
                     else:
                         error_text = await response.text()
-                        print(f"❌ TTS API error {response.status}: {error_text}")
+                        print(f"❌ Higgs Audio v2 API error {response.status}: {error_text}")
                         return None
             
         except asyncio.TimeoutError:
-            print(f"❌ TTS generation timeout")
+            print(f"❌ Higgs Audio v2 generation timeout")
             return None
         except Exception as e:
-            print(f"❌ TTS generation failed: {e}")
+            print(f"❌ Higgs Audio v2 generation failed: {e}")
             return None
 
 # Initialize AI Game Host

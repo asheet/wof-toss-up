@@ -11,9 +11,18 @@ AI_HOST_ENABLED=true
 # Fallback to static messages if AI fails
 FALLBACK_TO_STATIC=true
 
-# Text-to-Speech Configuration using higgs-audio-v2-generation-3B-base
+# Text-to-Speech Configuration using Higgs Audio v2 via vLLM
+# Enable TTS for AI game host audio responses
 TTS_ENABLED=true
+
+# Higgs Audio v2 model - state-of-the-art TTS with 75.7% win rate over GPT-4o-mini
 TTS_MODEL=higgs-audio-v2-generation-3B-base
-TTS_BASE_URL=http://your_vllm_server:port/v1
+
+# vLLM server endpoint for Higgs Audio v2 (use your external server URL)
+TTS_BASE_URL=http://your_vllm_server:port
+
+# API key for your vLLM server (if required)
 TTS_API_KEY=your_vllm_api_key_here
-TTS_VOICE=default
+
+# Voice settings (currently used for logging/identification)
+TTS_VOICE=game_host
