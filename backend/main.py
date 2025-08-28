@@ -721,6 +721,11 @@ async def start_new_round(room: GameRoom):
 # Static files are served by the frontend service in OpenShift
 # No need to serve them from the backend
 
+# Health check endpoint for OpenShift
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "wof-backend"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
