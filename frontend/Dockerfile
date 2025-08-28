@@ -14,7 +14,7 @@ RUN mkdir -p /var/log/nginx /var/cache/nginx /var/tmp/nginx /var/run/nginx /usr/
 COPY . /usr/share/nginx/html/
 
 # Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/http.d/default.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # OpenShift compatibility: Set proper permissions for arbitrary user IDs
 RUN chgrp -R 0 /var/log/nginx /var/cache/nginx /var/tmp/nginx /var/run/nginx /usr/share/nginx/html /etc/nginx && \

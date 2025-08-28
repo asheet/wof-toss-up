@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: wof-backend:latest
+        image: image-registry.openshift-image-registry.svc:5000/wheel-of-fortune/wof-backend:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
@@ -56,7 +56,6 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true
-          runAsUser: 1001
           capabilities:
             drop:
             - ALL

@@ -1,6 +1,4 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 import json
 import asyncio
 import random
@@ -720,12 +718,8 @@ async def start_new_round(room: GameRoom):
     room.current_timer_task = asyncio.create_task(countdown_timer(room))
     room.current_revealer_task = asyncio.create_task(reveal_letters_gradually(room))
 
-# Serve static files
-app.mount("/static", StaticFiles(directory="../frontend"), name="static")
-
-@app.get("/")
-async def read_index():
-    return FileResponse("../frontend/index.html")
+# Static files are served by the frontend service in OpenShift
+# No need to serve them from the backend
 
 if __name__ == "__main__":
     import uvicorn
