@@ -7,8 +7,11 @@ RUN apk add --no-cache nginx wget
 # Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
 
-# Create required directories
-RUN mkdir -p /var/log/nginx /var/cache/nginx /var/tmp/nginx /var/run/nginx /usr/share/nginx/html
+# Create required directories for nginx
+RUN mkdir -p /var/log/nginx /var/cache/nginx /var/tmp/nginx /var/run/nginx /usr/share/nginx/html \
+    /var/lib/nginx /var/lib/nginx/logs /var/lib/nginx/tmp /var/lib/nginx/tmp/client_body \
+    /var/lib/nginx/tmp/proxy /var/lib/nginx/tmp/fastcgi /var/lib/nginx/tmp/uwsgi \
+    /var/lib/nginx/tmp/scgi
 
 # Copy static files
 COPY . /usr/share/nginx/html/
@@ -17,8 +20,8 @@ COPY . /usr/share/nginx/html/
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # OpenShift compatibility: Set proper permissions for arbitrary user IDs
-RUN chgrp -R 0 /var/log/nginx /var/cache/nginx /var/tmp/nginx /var/run/nginx /usr/share/nginx/html /etc/nginx && \
-    chmod -R g+rwX /var/log/nginx /var/cache/nginx /var/tmp/nginx /var/run/nginx /usr/share/nginx/html /etc/nginx && \
+RUN chgrp -R 0 /var/log/nginx /var/cache/nginx /var/tmp/nginx /var/run/nginx /usr/share/nginx/html /etc/nginx /var/lib/nginx && \
+    chmod -R g+rwX /var/log/nginx /var/cache/nginx /var/tmp/nginx /var/run/nginx /usr/share/nginx/html /etc/nginx /var/lib/nginx && \
     touch /var/run/nginx/nginx.pid && \
     chmod g+rwx /var/run/nginx/nginx.pid
 
