@@ -16,6 +16,7 @@ spec:
       labels:
         app: wheel-of-fortune
         component: frontend
+        version: v1.0.0
     spec:
       containers:
       - name: frontend
