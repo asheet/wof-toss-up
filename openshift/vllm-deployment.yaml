@@ -56,7 +56,7 @@ spec:
             - name: HF_HOME
               value: /mnt/huggingface
             - name: HF_TOKEN
-              value: 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
+              value: <HF_TOKEN GOES HERE>
           ports:
             - containerPort: 8000
               protocol: TCP
