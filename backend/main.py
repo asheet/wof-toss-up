@@ -276,9 +276,15 @@ class AIGameHost:
             }
             
             # Make async HTTP request to vLLM server using chat completions endpoint
+            # Fix URL construction to avoid double /v1
+            if self.tts_base_url.endswith('/v1'):
+                api_url = f"{self.tts_base_url}/chat/completions"
+            else:
+                api_url = f"{self.tts_base_url}/v1/chat/completions"
+            
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.tts_base_url}/v1/chat/completions",
+                    api_url,
                     json=payload,
                     headers=headers,
                     timeout=aiohttp.ClientTimeout(total=60)  # Increased timeout for audio generation
@@ -460,12 +466,14 @@ async def countdown_timer(room: GameRoom):
                 "scores": {p.id: {"name": p.name, "score": p.score} for p in room.players.values()}
             }
             host_message = await ai_host.get_round_complete_message(room.current_puzzle["answer"], context)
-            await room.broadcast({
+            message_data = {
                 "type": "timer_expired",
                 "message": "Time's up!",
                 "host_message": host_message,
                 "answer": room.current_puzzle["answer"]
-            })
+            }
+            message_data = await add_audio_to_message(message_data, host_message)
+            await room.broadcast(message_data)
             
             # Wait a bit then start next round
             await asyncio.sleep(3)
@@ -502,12 +510,14 @@ async def answer_countdown_timer(room: GameRoom):
                 
                 host_message = f"{buzzed_player.name} took too long to answer! Time's up."
                 
-                await room.broadcast({
+                message_data = {
                     "type": "answer_timeout",
                     "player_name": buzzed_player.name,
                     "host_message": host_message,
                     "message": "Answer time expired!"
-                })
+                }
+                message_data = await add_audio_to_message(message_data, host_message)
+                await room.broadcast(message_data)
                 
                 # Reset buzzer state and continue game
                 room.buzzed_player = None
@@ -653,13 +663,15 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, name: str = "Pl
                         }
                         host_message = await ai_host.get_correct_answer_message(player.name, correct_answer, context)
                         
-                        await room.broadcast({
+                        message_data = {
                             "type": "correct_answer",
                             "winner": player.name,
                             "answer": correct_answer,
                             "host_message": host_message,
                             "scores": {p.id: {"name": p.name, "score": p.score} for p in room.players.values()}
-                        })
+                        }
+                        message_data = await add_audio_to_message(message_data, host_message)
+                        await room.broadcast(message_data)
                         
                         # Send updated player list with new scores
                         await room.broadcast({
@@ -682,12 +694,14 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, name: str = "Pl
                         }
                         host_message = await ai_host.get_incorrect_answer_message(player.name, guess, context)
                         
-                        await room.broadcast({
+                        message_data = {
                             "type": "incorrect_answer",
                             "player_name": player.name,
                             "guess": guess,
                             "host_message": host_message
-                        })
+                        }
+                        message_data = await add_audio_to_message(message_data, host_message)
+                        await room.broadcast(message_data)
                         
                         # Reset buzzer state and continue revealing
                         room.buzzed_player = None
@@ -763,14 +777,16 @@ async def start_new_round(room: GameRoom):
         "scores": {p.id: {"name": p.name, "score": p.score} for p in room.players.values()}
     }
     host_message = await ai_host.get_round_start_message(room.round_number, room.current_puzzle["category"], context)
-    await room.broadcast({
+    message_data = {
         "type": "round_start",
         "round_number": room.round_number,
         "category": room.current_puzzle["category"],
         "host_message": host_message,
         "puzzle_display": get_puzzle_display(room.current_puzzle["answer"], room.revealed_positions),
         "time_limit": room.round_time_limit
-    })
+    }
+    message_data = await add_audio_to_message(message_data, host_message)
+    await room.broadcast(message_data)
     
     # Immediately activate buzzer
     await room.broadcast({

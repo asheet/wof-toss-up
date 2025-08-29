@@ -19,7 +19,7 @@ async def test_higgs_audio_v2():
     
     # Configuration from environment
     tts_model = os.getenv("TTS_MODEL", "higgs-audio-v2-generation-3B-base")
-    tts_base_url = os.getenv("TTS_BASE_URL", "http://localhost:8000")
+    tts_base_url = os.getenv("TTS_BASE_URL", "https://vllm-route-wheel-of-fortune.apps.cluster-rpdb4.rpdb4.sandbox1254.opentlc.com:8000")
     tts_api_key = os.getenv("TTS_API_KEY", "")
     
     print("🎤 Testing Higgs Audio v2 TTS Integration")
@@ -71,13 +71,19 @@ async def test_higgs_audio_v2():
         if tts_api_key:
             headers["Authorization"] = f"Bearer {tts_api_key}"
         
-        print(f"🔗 Connecting to: {tts_base_url}/v1/chat/completions")
+        # Fix URL construction to avoid double /v1
+        if tts_base_url.endswith('/v1'):
+            api_url = f"{tts_base_url}/chat/completions"
+        else:
+            api_url = f"{tts_base_url}/v1/chat/completions"
+        
+        print(f"🔗 Connecting to: {api_url}")
         print(f"📝 Test text: {test_text}")
         print()
         
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{tts_base_url}/v1/chat/completions",
+                api_url,
                 json=payload,
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=60)
