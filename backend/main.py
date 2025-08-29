@@ -509,6 +509,9 @@ async def answer_countdown_timer(room: GameRoom):
                 message_data = await add_audio_to_message(message_data, host_message)
                 await room.broadcast(message_data)
                 
+                # Wait for AI audio to play before sending next message
+                await asyncio.sleep(1.5)
+                
                 # Reset buzzer state and continue game
                 room.buzzed_player = None
                 room.game_state = "buzzer_active"
@@ -663,6 +666,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, name: str = "Pl
                         message_data = await add_audio_to_message(message_data, host_message)
                         await room.broadcast(message_data)
                         
+                        # Wait for AI audio to play before sending next message
+                        await asyncio.sleep(2.0)
+                        
                         # Send updated player list with new scores
                         await room.broadcast({
                             "type": "player_update",
@@ -692,6 +698,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, name: str = "Pl
                         }
                         message_data = await add_audio_to_message(message_data, host_message)
                         await room.broadcast(message_data)
+                        
+                        # Wait for AI audio to play before sending next message
+                        await asyncio.sleep(1.5)
                         
                         # Reset buzzer state and continue revealing
                         room.buzzed_player = None
@@ -778,7 +787,10 @@ async def start_new_round(room: GameRoom):
     message_data = await add_audio_to_message(message_data, host_message)
     await room.broadcast(message_data)
     
-    # Immediately activate buzzer
+    # Wait for AI audio to play before sending next message
+    await asyncio.sleep(2.0)
+    
+    # Activate buzzer
     await room.broadcast({
         "type": "buzzer_active",
         "message": "Buzzer is active! Buzz in if you know the answer!"
