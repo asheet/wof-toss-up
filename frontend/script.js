@@ -6,6 +6,7 @@ class WheelOfFortuneGame {
         this.roomId = null;
         this.gameState = 'waiting';
         this.canBuzz = false;
+        this.currentHostAudio = null; // Track current AI audio playback
         
         this.initializeElements();
         this.attachEventListeners();
@@ -648,10 +649,20 @@ class WheelOfFortuneGame {
         
         // Play AI-generated audio if available and not muted
         if (audioData && !this.isHostMuted) {
+            // Stop any browser TTS before playing AI audio
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel();
+            }
             this.playHostAudio(audioData);
         }
         // Fallback to speech synthesis if no AI audio and not muted
         else if ('speechSynthesis' in window && !this.isHostMuted) {
+            // Stop any currently playing AI audio before browser TTS
+            if (this.currentHostAudio) {
+                this.currentHostAudio.pause();
+                this.currentHostAudio = null;
+            }
+            
             const utterance = new SpeechSynthesisUtterance(message);
             utterance.rate = 0.9;
             utterance.pitch = 1.1;
@@ -674,6 +685,12 @@ class WheelOfFortuneGame {
     
     playHostAudio(base64Audio) {
         try {
+            // Stop any currently playing audio first
+            if (this.currentHostAudio) {
+                this.currentHostAudio.pause();
+                this.currentHostAudio = null;
+            }
+
             // Convert base64 to blob
             const audioData = atob(base64Audio);
             const arrayBuffer = new ArrayBuffer(audioData.length);
@@ -683,18 +700,39 @@ class WheelOfFortuneGame {
             }
             
             // Create blob and audio element
-            const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+            const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
             const audioUrl = URL.createObjectURL(blob);
             const audio = new Audio(audioUrl);
             
+            // Store reference to current audio
+            this.currentHostAudio = audio;
+            
+            // Set up audio event handlers
+            audio.onended = () => {
+                console.log('🎤 AI host audio finished');
+                URL.revokeObjectURL(audioUrl);
+                if (this.currentHostAudio === audio) {
+                    this.currentHostAudio = null;
+                }
+            };
+            
+            audio.onerror = (error) => {
+                console.error('AI audio playback error:', error);
+                URL.revokeObjectURL(audioUrl);
+                if (this.currentHostAudio === audio) {
+                    this.currentHostAudio = null;
+                }
+            };
+            
             // Play the audio
             audio.play().then(() => {
-                console.log('🎤 Playing AI-generated host voice');
-                // Clean up the URL after playing
-                audio.onended = () => URL.revokeObjectURL(audioUrl);
+                console.log('🎤 Playing AI-generated host voice (Higgs Audio v2)');
             }).catch(error => {
                 console.error('Failed to play AI audio:', error);
                 URL.revokeObjectURL(audioUrl);
+                if (this.currentHostAudio === audio) {
+                    this.currentHostAudio = null;
+                }
             });
             
         } catch (error) {
