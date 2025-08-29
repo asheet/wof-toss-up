@@ -33,49 +33,32 @@ async def test_higgs_audio_v2():
     test_text = "Welcome to Wheel of Fortune Toss-up! Let's see what puzzle we have for you today. Good luck, contestants!"
     
     try:
-        # Higgs Audio v2 system prompt for game show hosting
-        system_prompt = (
-            "Generate expressive game show host audio following instruction.\n\n"
-            "<|scene_desc_start|>\n"
-            "Audio is recorded in a professional game show studio with good acoustics. "
-            "The speaker is an enthusiastic, friendly game show host with natural speech patterns, "
-            "appropriate pacing, and engaging intonation suitable for a TV game show audience.\n"
-            "<|scene_desc_end|>"
-        )
-        
-        # Prepare payload for Higgs Audio v2 via vLLM
+        # Prepare payload for Higgs Audio v2 via vLLM /v1/audio/speech endpoint
+        # Based on AudioSpeechRequest schema from OpenAPI
         payload = {
             "model": tts_model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": system_prompt
-                },
-                {
-                    "role": "user", 
-                    "content": test_text
-                }
-            ],
-            "max_tokens": 1024,
+            "input": test_text,
+            "voice": "game_host",
+            "speed": 1.0,
             "temperature": 0.3,
             "top_p": 0.95,
             "top_k": 50,
-            "stop": ["<|end_of_text|>", "<|eot_id|>"],
-            "stream": False
+            "response_format": "mp3",
+            "max_tokens": 1024
         }
         
         headers = {
             "Content-Type": "application/json"
         }
         
-        if tts_api_key:
+        if tts_api_key and tts_api_key != "your_vllm_api_key_here":
             headers["Authorization"] = f"Bearer {tts_api_key}"
         
-        # Fix URL construction to avoid double /v1
+        # Use the correct /v1/audio/speech endpoint
         if tts_base_url.endswith('/v1'):
-            api_url = f"{tts_base_url}/chat/completions"
+            api_url = f"{tts_base_url}/audio/speech"
         else:
-            api_url = f"{tts_base_url}/v1/chat/completions"
+            api_url = f"{tts_base_url}/v1/audio/speech"
         
         print(f"🔗 Connecting to: {api_url}")
         print(f"📝 Test text: {test_text}")
@@ -92,55 +75,69 @@ async def test_higgs_audio_v2():
                 print(f"📡 Response status: {response.status}")
                 
                 if response.status == 200:
-                    response_data = await response.json()
-                    print(f"✅ Success! Response keys: {list(response_data.keys())}")
+                    # Check content type - might be audio directly or JSON with audio data
+                    content_type = response.headers.get('content-type', '')
+                    print(f"✅ Success! Content-Type: {content_type}")
                     
-                    if 'choices' in response_data and len(response_data['choices']) > 0:
-                        choice = response_data['choices'][0]
-                        print(f"📋 Choice keys: {list(choice.keys())}")
+                    if 'audio' in content_type or 'application/octet-stream' in content_type:
+                        # Response is direct audio data
+                        audio_data = await response.read()
+                        print(f"🎵 Direct audio response: {len(audio_data)} bytes")
                         
-                        # Look for audio data
-                        audio_found = False
-                        audio_locations = [
-                            'audio',
-                            'message.audio',
-                            'content.audio',
-                            'message.content.audio'
-                        ]
-                        
-                        for location in audio_locations:
-                            try:
-                                keys = location.split('.')
-                                data = choice
-                                for key in keys:
-                                    data = data[key]
-                                
-                                if data:
+                        # Try to save audio to file for testing
+                        try:
+                            with open('test_higgs_audio.mp3', 'wb') as f:
+                                f.write(audio_data)
+                            print(f"💾 Audio saved to: test_higgs_audio.mp3 ({len(audio_data)} bytes)")
+                        except Exception as e:
+                            print(f"⚠️  Could not save audio: {e}")
+                    else:
+                        # Response might be JSON with audio data
+                        try:
+                            response_data = await response.json()
+                            print(f"📋 JSON Response keys: {list(response_data.keys())}")
+                            
+                            # Look for audio data in various possible locations
+                            audio_found = False
+                            audio_locations = ['audio', 'data', 'content']
+                            
+                            for location in audio_locations:
+                                if location in response_data:
+                                    audio_data = response_data[location]
                                     print(f"🎵 Audio data found at: {location}")
-                                    print(f"🎵 Audio data type: {type(data)}")
-                                    if isinstance(data, str):
-                                        print(f"🎵 Audio size: {len(data)} chars (base64)")
+                                    print(f"🎵 Audio data type: {type(audio_data)}")
+                                    
+                                    if isinstance(audio_data, str):
+                                        print(f"🎵 Audio size: {len(audio_data)} chars (base64)")
                                         
                                         # Try to save audio to file for testing
                                         try:
-                                            audio_bytes = base64.b64decode(data)
-                                            with open('test_higgs_audio.wav', 'wb') as f:
+                                            audio_bytes = base64.b64decode(audio_data)
+                                            with open('test_higgs_audio.mp3', 'wb') as f:
                                                 f.write(audio_bytes)
-                                            print(f"💾 Audio saved to: test_higgs_audio.wav ({len(audio_bytes)} bytes)")
+                                            print(f"💾 Audio saved to: test_higgs_audio.mp3 ({len(audio_bytes)} bytes)")
                                         except Exception as e:
                                             print(f"⚠️  Could not decode audio: {e}")
                                     
                                     audio_found = True
                                     break
-                            except (KeyError, TypeError):
-                                continue
-                        
-                        if not audio_found:
-                            print("⚠️  No audio data found in response")
-                            print("🔍 Full response structure:")
-                            print(json.dumps(response_data, indent=2, default=str)[:1000] + "...")
-                    else:
-                        print("❌ No choices in response")
+                            
+                            if not audio_found:
+                                print("⚠️  No audio data found in JSON response")
+                                print("🔍 Full response structure:")
+                                print(json.dumps(response_data, indent=2, default=str)[:1000] + "...")
+                        except Exception as json_error:
+                            print(f"⚠️  Could not parse JSON response: {json_error}")
+                            # Try treating as raw audio data
+                            audio_data = await response.read()
+                            if audio_data:
+                                print(f"🎵 Fallback: Raw audio data {len(audio_data)} bytes")
+                                try:
+                                    with open('test_higgs_audio.mp3', 'wb') as f:
+                                        f.write(audio_data)
+                                    print(f"💾 Audio saved to: test_higgs_audio.mp3 ({len(audio_data)} bytes)")
+                                except Exception as e:
+                                    print(f"⚠️  Could not save audio: {e}")
                         
                 else:
                     error_text = await response.text()

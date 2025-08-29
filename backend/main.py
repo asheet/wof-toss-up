@@ -232,55 +232,42 @@ class AIGameHost:
         return ai_msg or f"Aww, time's up! It was '{answer}' - but hey, let's keep going with the next round!"
     
     async def generate_speech_audio(self, text: str) -> Optional[str]:
-        """Generate speech audio using higgs-audio-v2-generation-3B-base model via vLLM and return base64 encoded audio data"""
+        """Generate speech audio using higgs-audio-v2-generation-3B-base model via vLLM /v1/audio/speech endpoint"""
         if not self.tts_enabled:
             return None
             
         try:
             print(f"🎤 Generating TTS with Higgs Audio v2 for: {text[:50]}{'...' if len(text) > 50 else ''}")
             
-            # Higgs Audio v2 system prompt optimized for game show hosting
-            system_prompt = (
-                "Generate expressive game show host audio following instruction.\n\n"
-                "<|scene_desc_start|>\n"
-                "Audio is recorded in a professional game show studio with good acoustics. "
-                "The speaker is an enthusiastic, friendly game show host with natural speech patterns, "
-                "appropriate pacing, and engaging intonation suitable for a TV game show audience.\n"
-                "<|scene_desc_end|>"
-            )
-            
-            # Prepare the request payload for Higgs Audio v2 via vLLM
+            # Prepare the request payload for Higgs Audio v2 via vLLM audio/speech endpoint
+            # Based on AudioSpeechRequest schema from OpenAPI
             payload = {
                 "model": self.tts_model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": system_prompt
-                    },
-                    {
-                        "role": "user", 
-                        "content": text
-                    }
-                ],
-                "max_tokens": 1024,
+                "input": text,
+                "voice": self.tts_voice,
+                "speed": 1.0,
                 "temperature": 0.3,
                 "top_p": 0.95,
                 "top_k": 50,
-                "stop": ["<|end_of_text|>", "<|eot_id|>"],
-                "stream": False
+                "response_format": "mp3",
+                "max_tokens": 1024
             }
             
             headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.tts_api_key}" if self.tts_api_key else ""
+                "Content-Type": "application/json"
             }
             
-            # Make async HTTP request to vLLM server using chat completions endpoint
-            # Fix URL construction to avoid double /v1
+            if self.tts_api_key and self.tts_api_key != "your_vllm_api_key_here":
+                headers["Authorization"] = f"Bearer {self.tts_api_key}"
+            
+            # Use the correct /v1/audio/speech endpoint
             if self.tts_base_url.endswith('/v1'):
-                api_url = f"{self.tts_base_url}/chat/completions"
+                api_url = f"{self.tts_base_url}/audio/speech"
             else:
-                api_url = f"{self.tts_base_url}/v1/chat/completions"
+                api_url = f"{self.tts_base_url}/v1/audio/speech"
+            
+            print(f"🔗 Connecting to: {api_url}")
+            print(f"🎤 Using voice: {self.tts_voice}")
             
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -290,50 +277,53 @@ class AIGameHost:
                     timeout=aiohttp.ClientTimeout(total=60)  # Increased timeout for audio generation
                 ) as response:
                     if response.status == 200:
-                        response_data = await response.json()
-                        print(f"🔍 Higgs Audio v2 response keys: {list(response_data.keys())}")
+                        # Check content type - might be audio directly or JSON with audio data
+                        content_type = response.headers.get('content-type', '')
                         
-                        # Extract audio data from the response
-                        # Note: The exact response format may vary depending on vLLM configuration
-                        if 'choices' in response_data and len(response_data['choices']) > 0:
-                            choice = response_data['choices'][0]
-                            print(f"🔍 Choice keys: {list(choice.keys())}")
-                            
-                            # Check different possible locations for audio data
-                            audio_data = None
-                            if 'audio' in choice:
-                                audio_data = choice['audio']
-                            elif 'message' in choice and 'audio' in choice['message']:
-                                audio_data = choice['message']['audio']
-                            elif 'content' in choice and 'audio' in choice['content']:
-                                audio_data = choice['content']['audio']
-                            elif 'message' in choice and 'content' in choice['message']:
-                                # Sometimes the audio might be embedded in the content
-                                content = choice['message']['content']
-                                if isinstance(content, dict) and 'audio' in content:
-                                    audio_data = content['audio']
-                            
-                            if audio_data:
-                                if isinstance(audio_data, str):
-                                    # Audio data is already base64 encoded
-                                    print(f"✅ TTS generated successfully with Higgs Audio v2 ({len(audio_data)} chars base64)")
-                                    return audio_data
-                                elif isinstance(audio_data, (bytes, bytearray)):
-                                    # Audio data needs to be encoded
-                                    audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-                                    print(f"✅ TTS generated successfully with Higgs Audio v2 ({len(audio_data)} bytes)")
-                                    return audio_base64
-                                else:
-                                    print(f"⚠️  Audio data in unexpected format: {type(audio_data)}")
-                                    return None
-                            else:
-                                print(f"⚠️  No audio data found in response")
-                                print(f"🔍 Full response structure: {response_data}")
-                                return None
+                        if 'audio' in content_type or 'application/octet-stream' in content_type:
+                            # Response is direct audio data
+                            audio_data = await response.read()
+                            audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                            print(f"✅ TTS generated successfully with Higgs Audio v2 ({len(audio_data)} bytes)")
+                            return audio_base64
                         else:
-                            print(f"❌ Invalid response format from Higgs Audio v2")
-                            print(f"🔍 Response keys: {list(response_data.keys()) if response_data else 'None'}")
-                            return None
+                            # Response might be JSON with audio data
+                            try:
+                                response_data = await response.json()
+                                print(f"🔍 Higgs Audio v2 response keys: {list(response_data.keys())}")
+                                
+                                # Look for audio data in various possible locations
+                                audio_data = None
+                                if 'audio' in response_data:
+                                    audio_data = response_data['audio']
+                                elif 'data' in response_data:
+                                    audio_data = response_data['data']
+                                elif 'content' in response_data:
+                                    audio_data = response_data['content']
+                                
+                                if audio_data:
+                                    if isinstance(audio_data, str):
+                                        # Audio data is already base64 encoded
+                                        print(f"✅ TTS generated successfully with Higgs Audio v2 ({len(audio_data)} chars base64)")
+                                        return audio_data
+                                    elif isinstance(audio_data, (bytes, bytearray)):
+                                        # Audio data needs to be encoded
+                                        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                                        print(f"✅ TTS generated successfully with Higgs Audio v2 ({len(audio_data)} bytes)")
+                                        return audio_base64
+                                else:
+                                    print(f"⚠️  No audio data found in JSON response")
+                                    print(f"🔍 Full response: {response_data}")
+                                    return None
+                            except Exception as json_error:
+                                print(f"⚠️  Could not parse JSON response: {json_error}")
+                                # Try treating as raw audio data
+                                audio_data = await response.read()
+                                if audio_data:
+                                    audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                                    print(f"✅ TTS generated successfully with Higgs Audio v2 ({len(audio_data)} bytes, fallback)")
+                                    return audio_base64
+                                return None
                     else:
                         error_text = await response.text()
                         print(f"❌ Higgs Audio v2 API error {response.status}: {error_text}")
