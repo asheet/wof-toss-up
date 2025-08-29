@@ -1,0 +1,178 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '12'
+  name: vllm
+  namespace: wheel-of-fortune
+  labels:
+    app: vllm-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-app
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: vllm-app
+      annotations:
+        openshift.openshift.io/restartedAt: '2025-08-29T14:00:31.868Z'
+    spec:
+      volumes:
+        - name: cache-volume
+          persistentVolumeClaim:
+            claimName: audio
+      containers:
+        - resources:
+            limits:
+              nvidia.com/gpu: '1'
+            requests:
+              nvidia.com/gpu: '1'
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+              scheme: HTTP
+            initialDelaySeconds: 240
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          terminationMessagePath: /dev/termination-log
+          name: vllm-openai
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+              scheme: HTTP
+            initialDelaySeconds: 240
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          env:
+            - name: HF_HOME
+              value: /mnt/huggingface
+            - name: HF_TOKEN
+              value: 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
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: cache-volume
+              mountPath: /mnt/huggingface
+            - name: cache-volume
+              mountPath: /.cache
+          terminationMessagePolicy: File
+          image: 'bosonai/higgs-audio-vllm:latest'
+          args:
+            - '--served-model-name=higgs-audio-v2-generation-3B-base'
+            - '--model=bosonai/higgs-audio-v2-generation-3B-base'
+            - '--max-model-len=4000'
+            - '--audio_tokenizer_type=bosonai/higgs-audio-v2-tokenizer'
+            - '--port=8000'
+            - '--gpu-memory-utilization=0.8'
+            - '--disable-mm-preprocessor-cache'
+            - '--trust-remote-code'
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext: {}
+      schedulerName: default-scheduler
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: vllm-openai-svc
+  namespace: wheel-of-fortune
+  uid: d27a5132-2f63-46e5-9cea-b2fc2f15ad51
+  resourceVersion: '71503'
+  creationTimestamp: '2025-08-29T13:57:31Z'
+  labels:
+    app: vllm-app
+  managedFields:
+    - manager: Mozilla
+      operation: Update
+      apiVersion: v1
+      time: '2025-08-29T13:57:31Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:labels':
+            .: {}
+            'f:app': {}
+        'f:spec':
+          'f:internalTrafficPolicy': {}
+          'f:ports':
+            .: {}
+            'k:{"port":8000,"protocol":"TCP"}':
+              .: {}
+              'f:port': {}
+              'f:protocol': {}
+              'f:targetPort': {}
+          'f:selector': {}
+          'f:sessionAffinity': {}
+          'f:type': {}
+spec:
+  clusterIP: 172.30.201.232
+  ipFamilies:
+    - IPv4
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  internalTrafficPolicy: Cluster
+  clusterIPs:
+    - 172.30.201.232
+  type: ClusterIP
+  ipFamilyPolicy: SingleStack
+  sessionAffinity: None
+  selector:
+    app: vllm-app
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: vllm-route
+  namespace: wheel-of-fortune
+  uid: 171393d9-0f87-4b3c-b445-69d44adada24
+  resourceVersion: '125831'
+  creationTimestamp: '2025-08-29T14:46:26Z'
+  annotations:
+    openshift.io/host.generated: 'true'
+spec:
+  host: vllm-route-wheel-of-fortune.apps.cluster-rpdb4.rpdb4.sandbox1254.opentlc.com
+  to:
+    kind: Service
+    name: vllm-openai-svc
+    weight: 100
+  port:
+    targetPort: 8000
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+  wildcardPolicy: None
+status:
+  ingress:
+    - host: vllm-route-wheel-of-fortune.apps.cluster-rpdb4.rpdb4.sandbox1254.opentlc.com
+      routerName: default
+      conditions:
+        - type: Admitted
+          status: 'True'
+          lastTransitionTime: '2025-08-29T14:46:26Z'
+      wildcardPolicy: None
+      routerCanonicalHostname: router-default.apps.cluster-rpdb4.rpdb4.sandbox1254.opentlc.com
